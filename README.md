@@ -1,39 +1,76 @@
-# .
+# QAsk
 
-This template should help get you started developing with Vue 3 in Vite.
+QAsk is a Vue.js-based application designed for interactive Q&A experiences.
 
-## Recommended IDE Setup
+## Features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- User-friendly interface optimized for desktop chatting.
+- Real-time question and answer streaming powered by Qwen.
+- Responsive layout with auto-follow when new messages arrive.
+- Vim-style keyboard shortcuts for fast input and navigation.
+- Hash-based deep links that prefill prompts and toggle streaming.
+- Streaming Markdown rendering with Shiki-powered code highlighting.
 
-## Type Support for `.vue` Imports in TS
+## Enhanced
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+### vimMode
 
-## Customize configuration
+- **Insert mode** activates automatically when the textarea gains focus so you can type right away.
+- Press <kbd>Esc</kbd> to switch to **Normal mode**; the textarea blurs so global shortcuts become available.
+- Press <kbd>i</kbd> to jump back into Insert mode without touching the mouse.
+- While in Normal mode, use <kbd>j</kbd>/<kbd>k</kbd> to move the focus highlight across previous rounds; the list auto-scrolls to the active item.
+- With the textarea focused, press <kbd>Enter</kbd> to send the message and <kbd>Shift</kbd>+<kbd>Enter</kbd> to insert a newline.
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+### hash query
 
-## Project Setup
+- Add `q` and `stream` parameters to the URL hash to deep-link into a pre-filled conversation.
+- Example: `http://localhost:5173/#q=Hello%20QAsk&stream=false` auto-sends `Hello QAsk` in a fresh session with non-streaming completions.
+- `stream` accepts `true` or `false`; omit it to use the default streaming behaviour.
+- The hash is parsed on load, making it easy to share reproducible prompts with teammates.
 
-```sh
-bun install
+### Token bootstrap
+
+- On first launch the app prompts for your Qwen token and stores it in `localStorage` under the `token` key.
+- To rotate credentials, clear the stored token in DevTools and reload the page.
+- All API calls reuse that token through a lightweight session helper in `@/libs/Qwen`.
+
+## Tampermonkey proxy
+
+The `tampermonkey/cors.js` userscript intercepts `fetch` calls that target `/api/*` and replays them through `GM_xmlhttpRequest` to `https://chat.qwen.ai`. This enables this project's running.
+
+## Getting Started
+
+1. **Clone the repository:**
+
+```bash
+git clone https://github.com/yourusername/QAsk.git
+cd QAsk
 ```
 
-### Compile and Hot-Reload for Development
+2. **Install dependencies:**
 
-```sh
-bun dev
+```bash
+npm install
 ```
 
-### Type-Check, Compile and Minify for Production
+3. **Run the development server:**
 
-```sh
-bun run build
+```bash
+npm run dev
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+4. **Authorize API access:**
+   - On first load the app prompts for a Qwen token. Paste a valid token to proceed.
+   - You can update the token later by clearing the `token` entry in `localStorage`.
+   - When developing against the official Qwen endpoints, consider enabling the Tampermonkey proxy to bypass CORS errors.
 
-```sh
-bun lint
-```
+## Technologies Used
+
+- [Vue.js](https://vuejs.org/)
+- [Vite](https://vitejs.dev/)
+- [Streaming Markdown](https://github.com/lepture/streaming-markdown) for incremental rendering.
+- [Shiki](https://shiki.style/) for code highlighting.
+
+## License
+
+This project is licensed under the MIT License.
