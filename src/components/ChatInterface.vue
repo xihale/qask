@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Qwen } from '@/libs/Qwen/index'
+import type { RoundOptions } from '@/libs/Qwen/index'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { models } from '@/libs/Qwen/types/models'
 import * as smd from 'streaming-markdown'
@@ -19,6 +20,27 @@ const { enterInsertMode, handleVimKey } = useVimMode(chatbox)
 let chatboxKeydownHandler: ((event: KeyboardEvent) => Promise<void>) | null = null
 let windowKeydownHandler: ((event: KeyboardEvent) => void) | null = null
 let lastChatboxElement: HTMLTextAreaElement | null = null
+let roundOptionsFromHash: RoundOptions | undefined
+
+function parseHashParams(): { stream?: boolean; query?: string } {
+  const hash = window.location.hash
+  if (!hash || hash.length <= 1) return {}
+  const params = new URLSearchParams(hash.slice(1))
+  const streamParam = params.get('stream')
+  const qParam = params.get('q')
+
+  let stream: boolean | undefined
+  if (streamParam !== null) {
+    stream = streamParam === 'true'
+  }
+
+  const query = qParam?.trim()
+
+  return {
+    stream,
+    query: query ? query : undefined,
+  }
+}
 
 function addRound(ask: string): ChatRound {
   const lastRound = rounds.value[rounds.value.length - 1]
@@ -75,7 +97,30 @@ onMounted(async () => {
   // const session = await Qwen.new(models._30b_a3b)
   const session = Qwen.getTempSession()
 
-  await nextTick()
+  const { stream: streamFromHash, query } = parseHashParams()
+  roundOptionsFromHash = streamFromHash !== undefined ? { stream: streamFromHash } : undefined
+
+  if (query && session) {
+    const currentRound = addRound(query)
+    const stream = session.round(query, roundOptionsFromHash)
+
+    await nextTick()
+    roundList.value?.scrollToFocusedRound(focusedRoundIndex.value)
+
+    const streamer = createMarkdownStreamer(currentRound)
+    try {
+      for await (const chunk of stream) {
+        await streamer.append(Qwen.extractContent(chunk))
+        await nextTick()
+        if (autoFollow.value) roundList.value?.scrollToBottom()
+      }
+    } finally {
+      await streamer.finalize()
+      await nextTick()
+      if (autoFollow.value) roundList.value?.scrollToBottom()
+    }
+  } else await nextTick()
+
   // 等待 chatbox 渲染完成
   let chatboxElement = chatbox.value
   let retry = 0
@@ -102,15 +147,17 @@ onMounted(async () => {
       if (!chatboxEl) return
       const userInput = chatboxEl.value.trim()
       if (!userInput) return
-      const stream = session.round(userInput)
+      if (!session) return
       const currentRound = addRound(userInput)
       chatboxEl.value = ''
+      const stream = session.round(userInput, roundOptionsFromHash)
       await nextTick()
       roundList.value?.scrollToFocusedRound(focusedRoundIndex.value)
+
       const streamer = createMarkdownStreamer(currentRound)
       try {
         for await (const chunk of stream) {
-          streamer.append(Qwen.extractContent(chunk))
+          await streamer.append(Qwen.extractContent(chunk))
           await nextTick()
           if (autoFollow.value) roundList.value?.scrollToBottom()
         }
