@@ -1,5 +1,10 @@
 name: pages
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 on:
   push:
     branches:
@@ -10,7 +15,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
