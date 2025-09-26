@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Qwen } from '@/libs/Qwen/index'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { models } from '@/libs/Qwen/types/models'
 import * as smd from 'streaming-markdown'
 import { useVimMode } from '@/composables/useVimMode'
