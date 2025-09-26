@@ -172,19 +172,22 @@ onMounted(async () => {
   chatboxElement.addEventListener('keydown', chatboxKeydownHandler)
 
   windowKeydownHandler = (event: KeyboardEvent) => {
-    if (document.activeElement !== chatboxElement) {
-      if (event.key === 'j') {
-        event.preventDefault()
-        moveFocus(1)
-        return
-      }
-      if (event.key === 'k') {
-        event.preventDefault()
-        moveFocus(-1)
-        return
-      }
-      handleVimKey(event)
+    if (document.activeElement === chatboxElement) return
+
+    const normalizedKey = event.key.toLowerCase()
+    const keyActionMap: Record<string, () => void> = {
+      j: () => moveFocus(1),
+      k: () => moveFocus(-1),
     }
+
+    const matchedAction = keyActionMap[normalizedKey]
+    if (matchedAction) {
+      event.preventDefault()
+      matchedAction()
+      return
+    }
+
+    handleVimKey(event)
   }
 
   window.addEventListener('keydown', windowKeydownHandler)
