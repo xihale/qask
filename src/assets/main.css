@@ -1,5 +1,67 @@
 @import './base.css';
 
+@font-face {
+  font-family: 'Maple Mono';
+  src: url('./MapleMono-Light.ttf.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --code-line-number-width: 3ch;
+  --code-line-number-color: #9ca3af;
+}
+
+code,
+pre,
+pre code {
+  font-family: 'Maple Mono', 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+  font-weight: 300;
+  font-size: 0.95rem;
+}
+
+pre {
+  position: relative;
+  outline: 2px dashed #6b7280;
+  padding: 1rem 1.25rem 1rem calc(var(--code-line-number-width));
+  overflow-x: auto;
+  background-clip: padding-box;
+  margin-left: calc(-1 * var(--content-padding, 0px));
+  margin-right: calc(-1 * var(--content-padding, 0px));
+}
+
+pre code {
+  display: block;
+  counter-reset: code-line;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+pre code span {
+  white-space: inherit;
+}
+
+pre code .line {
+  position: relative;
+  padding-left: 0.5rem;
+}
+
+pre code .line::before {
+  counter-increment: code-line;
+  content: counter(code-line);
+  position: absolute;
+  left: calc(-1 * (var(--code-line-number-width)));
+  width: var(--code-line-number-width);
+  text-align: right;
+  color: var(--code-line-number-color);
+  opacity: 0.75;
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  padding-right: 0.75rem;
+}
+
 a,
 .green {
   text-decoration: none;
@@ -36,5 +98,10 @@ a,
     a:hover {
       background-color: hsla(160, 100%, 57%, 0.2);
     }
+  }
+
+  :root {
+    --code-line-number-color: #6b7280;
+    --code-block-border: rgba(148, 163, 184, 0.3);
   }
 }

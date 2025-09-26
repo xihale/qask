@@ -12,6 +12,10 @@ export class Qwen {
     if (token) Qwen.token = token
   }
 
+  static getTempSession(): Session {
+    return new Session('078c6d24-3c49-499a-ab42-7716068ff459', models.coder_30b_a3b_instruct)
+  }
+
   static getHeaders() {
     if (!Qwen.token) throw new Error('No TOKEN provided in env!')
     return {
