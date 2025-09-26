@@ -6,13 +6,12 @@
 // @license     GPL version 3
 // @encoding    utf-8
 // @match       *://localhost:*/*
+// @match       *://q.xihale.top/*
 // @grant       GM_xmlhttpRequest
 // @connect     chat.qwen.ai
 // @run-at      document-start
 // @version     1.2.0
 // ==/UserScript==
-
-/* global GM_xmlhttpRequest */
 
 ;(function () {
   'use strict'
