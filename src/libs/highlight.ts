@@ -1,9 +1,5 @@
 import { codeToHtml } from 'shiki/bundle/full'
 
-function extractCandidateLanguages(codeElement: HTMLElement): string {
-  return codeElement.className
-}
-
 export async function highlightCodeBlocks(root: HTMLElement) {
   const codeBlocks = root.querySelectorAll('pre code')
   if (!codeBlocks.length) return
@@ -16,7 +12,8 @@ export async function highlightCodeBlocks(root: HTMLElement) {
     const pre = codeElement.parentElement as HTMLElement | null
     if (!pre || pre.dataset.highlighted === 'true') continue
 
-    const candidate = extractCandidateLanguages(codeElement)
+    const candidate = codeElement.className
+    if (candidate.includes(' ')) continue
     const lang = candidate
     const code = codeElement.textContent ?? ''
 

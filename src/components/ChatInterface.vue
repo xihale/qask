@@ -13,7 +13,7 @@ const roundList = ref<InstanceType<typeof ChatRounds> | null>(null)
 const rounds = ref<ChatRound[]>([])
 const focusedRoundIndex = ref<number>(-1)
 const autoFollow = ref(true)
-const { vimMode, enterInsertMode, handleVimKey } = useVimMode(chatbox)
+const { enterInsertMode, handleVimKey } = useVimMode(chatbox)
 
 let chatboxKeydownHandler: ((event: KeyboardEvent) => Promise<void>) | null = null
 let windowKeydownHandler: ((event: KeyboardEvent) => void) | null = null
@@ -43,9 +43,12 @@ const createMarkdownStreamer = (round: ChatRound) => {
   const parser = smd.parser(renderer)
 
   return {
-    append(markdown: string) {
+    async append(markdown: string) {
       if (!markdown) return
       smd.parser_write(parser, markdown)
+      if (markdown.match(/```\n/)) {
+        await highlightCodeBlocks(container)
+      }
       round.response = container.innerHTML
     },
     async finalize() {
@@ -92,7 +95,7 @@ onMounted(async () => {
 
   chatboxKeydownHandler = async (event: KeyboardEvent) => {
     handleVimKey(event)
-    if (vimMode.insert && event.key === 'Enter' && !event.shiftKey) {
+    if (document.activeElement === chatboxElement && event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       const chatboxEl = chatbox.value
       if (!chatboxEl) return
@@ -121,7 +124,7 @@ onMounted(async () => {
   chatboxElement.addEventListener('keydown', chatboxKeydownHandler)
 
   windowKeydownHandler = (event: KeyboardEvent) => {
-    if (!vimMode.insert) {
+    if (document.activeElement !== chatboxElement) {
       if (event.key === 'j') {
         event.preventDefault()
         moveFocus(1)
@@ -152,7 +155,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="container">
     <ChatRounds ref="roundList" :rounds="rounds" :focused-round-index="focusedRoundIndex" />
-    <textarea class="chatbox" ref="chatbox" :tabindex="vimMode.insert ? 0 : -1"></textarea>
+    <textarea class="chatbox" ref="chatbox"></textarea>
   </div>
 </template>
 
