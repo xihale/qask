@@ -2,7 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Qwen } from '@/libs/Qwen/index'
 import type { RoundOptions } from '@/libs/Qwen/index'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 import { models } from '@/libs/Qwen/types/models'
 import * as smd from 'streaming-markdown'
 import { useVimMode } from '@/composables/useVimMode'
@@ -111,8 +111,8 @@ onMounted(async () => {
   }
   Qwen.setToken(token)
   // await Qwen.auth()
-  // const session = await Qwen.new(models._30b_a3b)
-  const session = Qwen.getTempSession()
+  const session = await Qwen.new(models._30b_a3b)
+  // const session = Qwen.getTempSession()
 
   const { stream: streamFromHash, query } = parseHashParams()
   roundOptionsFromHash = streamFromHash !== undefined ? { stream: streamFromHash } : undefined
@@ -164,7 +164,6 @@ onMounted(async () => {
       if (!chatboxEl) return
       const userInput = chatboxEl.value.trim()
       if (!userInput) return
-      if (!session) return
       const currentRound = addRound(userInput)
       chatboxEl.value = ''
       const stream = session.round(userInput, roundOptionsFromHash)
