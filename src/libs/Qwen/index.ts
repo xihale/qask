@@ -4,6 +4,10 @@ import { models, type Model } from './types/models'
 const apiBase = 'https://chat.qwen.ai/api'
 // const apiBase = '/api' // for Vite proxy
 
+declare global {
+  const gm_fetch: typeof fetch
+}
+
 export class Qwen {
   static token: string | undefined
   static childrenId: string[] = []
