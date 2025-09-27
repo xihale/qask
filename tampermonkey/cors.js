@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        CORS Bypass
+// @name        GM_fetch
 // @author      xihale
 // @description CORS Bypass script
 // @namespace   xihale.top
@@ -7,8 +7,10 @@
 // @grant       GM_xmlhttpRequest
 // @grant       unsafeWindow
 // @connect     *
+// @match       localhost
+// @match       q.xihale.top
 // @run-at      document-start
-// @version     0.0.1
+// @version     0.0.2
 // ==/UserScript==
 
 // reference: https://github.com/Tampermonkey/tampermonkey/issues/1278#issuecomment-1004568936
