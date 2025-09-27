@@ -4,9 +4,11 @@ QAsk is a Vue.js-based application designed for interactive Q&A experiences.
 
 ## How to use
 
+0. Install tempermonkey script for cors bypassing
+   from proj workplace or [greasyfork](https://greasyfork.org/zh-CN/scripts/550823-gm-fetch)
 1. Get token(any one is ok) from [Qwen Chat](chat.qwen.ai)
 2. configure token
-3. begin asking & have a good day!
+3. (permit cors bypassing &) begin asking & have a good day!
 
 ## Features
 
