@@ -2,6 +2,12 @@
 
 QAsk is a Vue.js-based application designed for interactive Q&A experiences.
 
+## How to use
+
+1. Get token(any one is ok) from [Qwen Chat](chat.qwen.ai)
+2. configure token
+3. begin asking & have a good day!
+
 ## Features
 
 - User-friendly interface optimized for desktop chatting.
@@ -36,7 +42,7 @@ QAsk is a Vue.js-based application designed for interactive Q&A experiences.
 
 ## Tampermonkey proxy
 
-The `tampermonkey/cors.js` userscript intercepts `fetch` calls that target `/api/*` and replays them through `GM_xmlhttpRequest` to `https://chat.qwen.ai`. This enables this project's running.
+The `tampermonkey/cors.js` userscript now exposes a `window.gm_fetch` helper that replays requests through `GM_xmlhttpRequest` with streaming support. It automatically falls back to the native `fetch` when CORS isn't a problem, while transparently bypassing cross-origin restrictions for any remote endpoint the page tries to access.
 
 ## Getting Started
 
