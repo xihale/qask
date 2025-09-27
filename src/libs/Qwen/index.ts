@@ -1,8 +1,8 @@
 import type { SessionData } from './types'
 import { models, type Model } from './types/models'
 
-// const apiBase = 'https://chat.qwen.ai/api'
-const apiBase = '/api' // for Vite proxy
+const apiBase = 'https://chat.qwen.ai/api'
+// const apiBase = '/api' // for Vite proxy
 
 export class Qwen {
   static token: string | undefined
@@ -27,7 +27,7 @@ export class Qwen {
   }
 
   static async auth() {
-    const result = await fetch(`${apiBase}/v1/auths/`, {
+    const result = await gm_fetch(`${apiBase}/v1/auths/`, {
       headers: Qwen.getHeaders(),
       body: null,
       method: 'GET',
@@ -37,7 +37,7 @@ export class Qwen {
   }
 
   static async new(model: Model): Promise<Session> {
-    const data = await fetch(`${apiBase}/v2/chats/new`, {
+    const data = await gm_fetch(`${apiBase}/v2/chats/new`, {
       method: 'POST',
       headers: Qwen.getHeaders(),
       body: JSON.stringify({
@@ -140,7 +140,7 @@ export class Session {
       timestamp: Math.floor(Date.now() / 1000),
     }
 
-    const res = await fetch(url, {
+    const res = await gm_fetch(url, {
       method: 'POST',
       headers: Qwen.getHeaders(),
       body: JSON.stringify(body),
@@ -163,6 +163,7 @@ export class Session {
         if (done) break
         if (value) {
           const chunks = decoder.decode(value)
+          console.log(chunks)
           // network jam
           for (const chunk of chunks.split('\n\n')) {
             yield chunk

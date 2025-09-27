@@ -1,119 +1,216 @@
 // ==UserScript==
-// @name        Qwen CORS Proxy
+// @name        CORS Bypass
 // @author      xihale
-// @description 使用 GM_xmlhttpRequest 转发 Qwen API 请求，解决跨域限制
+// @description CORS Bypass script
 // @namespace   xihale.top
 // @license     GPL version 3
-// @encoding    utf-8
-// @match       *://localhost:*/*
-// @match       *://q.xihale.top/*
 // @grant       GM_xmlhttpRequest
-// @connect     chat.qwen.ai
+// @grant       unsafeWindow
+// @connect     *
 // @run-at      document-start
-// @version     1.2.0
+// @version     0.0.1
 // ==/UserScript==
+
+// reference: https://github.com/Tampermonkey/tampermonkey/issues/1278#issuecomment-1004568936
 
 ;(function () {
   'use strict'
 
-  const TARGET_ORIGIN = 'https://chat.qwen.ai'
-  const API_PREFIX = '/api/'
-  const nativeFetch = window.fetch.bind(window)
+  const PREFIX = '[GMFetch]'
+  const nativeFetch =
+    typeof unsafeWindow.fetch === 'function' ? unsafeWindow.fetch.bind(unsafeWindow) : null
+  const RESPONSE_TYPE = GM_xmlhttpRequest?.RESPONSE_TYPE_STREAM ? 'stream' : 'arraybuffer'
 
-  function shouldIntercept(url) {
+  function toPlainHeaders(headersInit = {}) {
     try {
-      const parsed = new URL(url, window.location.href)
-      return parsed.origin === window.location.origin && parsed.pathname.startsWith(API_PREFIX)
+      return Object.fromEntries(new Headers(headersInit).entries())
     } catch (error) {
-      console.warn('[QwenProxy] URL 解析失败，使用原生 fetch：', url, error)
-      return false
+      console.warn(`${PREFIX} 无法解析请求头`, headersInit, error)
+      return {}
     }
   }
 
-  function rewriteUrl(url) {
-    const parsed = new URL(url, window.location.href)
-    return TARGET_ORIGIN + parsed.pathname + parsed.search + parsed.hash
-  }
-
-  function headersToObject(headers) {
-    const obj = {}
-    headers.forEach((value, key) => {
-      if (['host', 'content-length', 'origin'].includes(key.toLowerCase())) return
-      obj[key] = value
-    })
-    return obj
-  }
-
-  function parseResponseHeaders(raw) {
+  function parseHeaders(raw) {
     const headers = new Headers()
-    if (!raw) return headers
+    if (!raw) {
+      return headers
+    }
     raw
       .trim()
       .split(/\r?\n/)
       .forEach((line) => {
+        if (!line) return
         const index = line.indexOf(':')
         if (index === -1) return
-        const name = line.slice(0, index).trim()
+        const key = line.slice(0, index).trim()
         const value = line.slice(index + 1).trim()
-        if (name) headers.append(name, value)
+        try {
+          headers.append(key, value)
+        } catch (err) {
+          console.warn(`${PREFIX} 无法解析响应头`, line, err)
+        }
       })
     return headers
   }
 
-  async function gmFetch(input, init = {}) {
-    const request = input instanceof Request ? input : new Request(input, init)
+  const toBody = (body, binary = false) => ({ body, binary })
+  const emptyBody = () => toBody()
+  const binaryBody = (body) => toBody(body, true)
 
-    if (!shouldIntercept(request.url)) {
-      return nativeFetch(request)
+  const matchAsync = async (value, cases, fallback) => {
+    for (const [predicate, resolver] of cases) {
+      if (await predicate(value)) {
+        return resolver(value)
+      }
+    }
+    return fallback(value)
+  }
+
+  const isInstance = (Ctor) => (value) => typeof Ctor !== 'undefined' && value instanceof Ctor
+
+  async function normalizeBody(body) {
+    return matchAsync(
+      body,
+      [
+        [(value) => value == null, () => emptyBody()],
+        [(value) => typeof value === 'string', (value) => toBody(value)],
+        [isInstance(URLSearchParams), (value) => toBody(value.toString())],
+        [isInstance(FormData), (value) => toBody(value)],
+        [isInstance(Blob), async (value) => binaryBody(await value.arrayBuffer())],
+        [isInstance(ArrayBuffer), (value) => binaryBody(value)],
+        [ArrayBuffer.isView, (value) => binaryBody(value.buffer)],
+      ],
+      (value) => toBody(value),
+    )
+  }
+
+  async function resolveBody(request, init = {}) {
+    if (init.body !== undefined) {
+      return normalizeBody(init.body)
     }
 
-    const method = (init.method || request.method || 'GET').toUpperCase()
-    const headers = new Headers(init.headers || request.headers)
-    const body =
-      init.body ??
-      (method === 'GET' || method === 'HEAD'
-        ? undefined
-        : await (input instanceof Request ? input.clone().text() : request.clone().text()))
+    if (!(request instanceof Request)) {
+      return emptyBody()
+    }
+
+    const method = request.method?.toUpperCase?.() ?? 'GET'
+    if (method === 'GET' || method === 'HEAD') {
+      return emptyBody()
+    }
+
+    const readers = [
+      async () => {
+        const text = await request.clone().text()
+        return text ? toBody(text) : null
+      },
+      async () => {
+        const buffer = await request.clone().arrayBuffer()
+        return buffer && buffer.byteLength > 0 ? binaryBody(buffer) : null
+      },
+    ]
+
+    for (const read of readers) {
+      try {
+        const result = await read()
+        if (result) {
+          return result
+        }
+      } catch {}
+    }
+
+    return emptyBody()
+  }
+
+  function buildResponse(gmResponse) {
+    const headers = parseHeaders(gmResponse.responseHeaders)
+    const status = gmResponse.status || 0
+    const init = {
+      headers,
+      status: status === 0 ? 200 : status,
+      statusText: gmResponse.statusText || 'OK',
+    }
+    if (status === 0) {
+      console.warn(`${PREFIX} 接收到状态码 0，自动回退为 200`, gmResponse)
+    }
+    const body = gmResponse.response ?? null
+    return new Response(body, init)
+  }
+
+  function toRequest(input, init) {
+    if (input instanceof Request) {
+      return new Request(input, init)
+    }
+    return new Request(String(input), init)
+  }
+
+  async function gmFetch(input, fetchInit = {}) {
+    const request = toRequest(input, fetchInit)
+    const requestUrl = request.url
+
+    if (!requestUrl) {
+      throw new TypeError('Failed to execute fetch: URL is required')
+    }
+
+    if (typeof GM_xmlhttpRequest !== 'function') {
+      if (nativeFetch) {
+        return nativeFetch(input, fetchInit)
+      }
+      throw new ReferenceError('GM_xmlhttpRequest is not available')
+    }
+
+    const headers = toPlainHeaders(fetchInit.headers ?? request.headers)
+    const { body, binary } = await resolveBody(request, fetchInit)
 
     return new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        url: rewriteUrl(request.url),
-        method,
-        headers: headersToObject(headers),
+      let settled = false
+
+      const settleWith = (factory) => (response) => {
+        if (settled) return
+        settled = true
+        try {
+          resolve(factory(response))
+        } catch (error) {
+          reject(error)
+        }
+      }
+
+      const finalize = settleWith(buildResponse)
+
+      const config = {
+        url: requestUrl,
+        method: (fetchInit.method ?? request.method ?? 'GET').toUpperCase(),
+        headers,
         data: body,
-        responseType: 'text',
-        onload(response) {
-          resolve(
-            new Response(response.responseText || '', {
-              status: response.status,
-              statusText: response.statusText,
-              headers: parseResponseHeaders(response.responseHeaders),
-            }),
-          )
+        binary: Boolean(binary),
+        responseType: RESPONSE_TYPE,
+        onload: finalize,
+        onerror: (error) => {
+          if (settled) return
+          settled = true
+          reject(error?.error || error || new Error('GM_xmlhttpRequest failed'))
         },
-        onerror() {
-          reject(new TypeError('[QwenProxy] 请求失败'))
-        },
-        ontimeout() {
-          reject(new TypeError('[QwenProxy] 请求超时'))
-        },
-        onabort() {
-          reject(new DOMException('Aborted', 'AbortError'))
-        },
-      })
+      }
+
+      if (RESPONSE_TYPE === 'stream') {
+        config.onreadystatechange = (response) => {
+          if (response.readyState === 2 && !settled) {
+            finalize(response)
+          }
+        }
+      }
+
+      GM_xmlhttpRequest(config)
     })
   }
 
-  const proxiedFetch = function (input, init) {
-    return gmFetch(input, init)
-  }
+  Object.defineProperty(gmFetch, 'native', {
+    value: nativeFetch,
+    writable: false,
+    enumerable: false,
+    configurable: false,
+  })
 
-  window.fetch = proxiedFetch
-  globalThis.fetch = proxiedFetch
+  unsafeWindow.gm_fetch = gmFetch
 
-  if (typeof unsafeWindow !== 'undefined') {
-    unsafeWindow.fetch = proxiedFetch
-  }
-
-  console.info('[QwenProxy] 简易 Tampermonkey CORS 代理已启用')
+  console.info(`${PREFIX} Tampermonkey 通用 CORS 代理已启用`)
 })()
