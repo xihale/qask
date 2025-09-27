@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ChatRound } from '@/types/chat'
 
 const props = defineProps<{
@@ -7,7 +7,34 @@ const props = defineProps<{
   focusedRoundIndex: number
 }>()
 
+const emit = defineEmits<{
+  (event: 'scroll-up'): void
+  (event: 'reach-bottom'): void
+}>()
+
 const container = ref<HTMLElement | null>(null)
+let previousScrollTop = 0
+
+function handleScroll(event: Event) {
+  const el = event.target as HTMLElement | null
+  if (!el) return
+
+  const currentScrollTop = el.scrollTop
+  if (!event.isTrusted) {
+    previousScrollTop = currentScrollTop
+    return
+  }
+  if (currentScrollTop < previousScrollTop) {
+    emit('scroll-up')
+  } else {
+    const distanceToBottom = el.scrollHeight - el.clientHeight - currentScrollTop
+    if (distanceToBottom <= 8) {
+      emit('reach-bottom')
+    }
+  }
+
+  previousScrollTop = currentScrollTop
+}
 
 function scrollToFocusedRound(index: number) {
   const el = container.value
@@ -23,6 +50,19 @@ function scrollToBottom() {
   if (!el) return
   el.scrollTop = el.scrollHeight
 }
+
+onMounted(() => {
+  const el = container.value
+  if (!el) return
+  previousScrollTop = el.scrollTop
+  el.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  const el = container.value
+  if (!el) return
+  el.removeEventListener('scroll', handleScroll)
+})
 
 defineExpose({ scrollToFocusedRound, scrollToBottom })
 </script>
@@ -45,7 +85,8 @@ defineExpose({ scrollToFocusedRound, scrollToBottom })
 .content {
   flex: 1;
   overflow-y: auto;
-  outline: 1px solid #303030;
+  border: 1px solid #303030;
+  box-sizing: border-box;
 }
 
 .round {
@@ -53,15 +94,16 @@ defineExpose({ scrollToFocusedRound, scrollToBottom })
   flex-direction: column;
 }
 
-.round + .round {
-  margin-top: -1px;
-}
-
 .ask,
 .response {
   --content-padding: 10px;
   padding: var(--content-padding);
-  outline: 1px solid #303030;
+  border: 1px solid #303030;
+  box-sizing: border-box;
+}
+
+.round + .round .ask {
+  margin-top: -1px;
 }
 
 .ask {

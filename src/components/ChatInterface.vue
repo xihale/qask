@@ -60,6 +60,23 @@ function moveFocus(offset: number) {
   roundList.value?.scrollToFocusedRound(focusedRoundIndex.value)
 }
 
+function isRoundFocused(round: ChatRound) {
+  if (focusedRoundIndex.value < 0) return false
+  return rounds.value[focusedRoundIndex.value]?.id === round.id
+}
+
+function shouldAutoFollow(round: ChatRound) {
+  return autoFollow.value && isRoundFocused(round)
+}
+
+function handleRoundsScrollUp() {
+  autoFollow.value = false
+}
+
+function handleRoundsReachBottom() {
+  autoFollow.value = true
+}
+
 const createMarkdownStreamer = (round: ChatRound) => {
   const container = document.createElement('div')
   const renderer = smd.default_renderer(container)
@@ -112,12 +129,12 @@ onMounted(async () => {
       for await (const chunk of stream) {
         await streamer.append(Qwen.extractContent(chunk))
         await nextTick()
-        if (autoFollow.value) roundList.value?.scrollToBottom()
+        if (shouldAutoFollow(currentRound)) roundList.value?.scrollToBottom()
       }
     } finally {
       await streamer.finalize()
       await nextTick()
-      if (autoFollow.value) roundList.value?.scrollToBottom()
+      if (shouldAutoFollow(currentRound)) roundList.value?.scrollToBottom()
     }
   } else await nextTick()
 
@@ -159,12 +176,12 @@ onMounted(async () => {
         for await (const chunk of stream) {
           await streamer.append(Qwen.extractContent(chunk))
           await nextTick()
-          if (autoFollow.value) roundList.value?.scrollToBottom()
+          if (shouldAutoFollow(currentRound)) roundList.value?.scrollToBottom()
         }
       } finally {
         await streamer.finalize()
         await nextTick()
-        if (autoFollow.value) roundList.value?.scrollToBottom()
+        if (shouldAutoFollow(currentRound)) roundList.value?.scrollToBottom()
       }
     }
   }
@@ -205,7 +222,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="container">
-    <ChatRounds ref="roundList" :rounds="rounds" :focused-round-index="focusedRoundIndex" />
+    <ChatRounds
+      ref="roundList"
+      :rounds="rounds"
+      :focused-round-index="focusedRoundIndex"
+      @scroll-up="handleRoundsScrollUp"
+      @reach-bottom="handleRoundsReachBottom"
+    />
     <textarea class="chatbox" ref="chatbox"></textarea>
   </div>
 </template>
