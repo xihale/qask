@@ -76,7 +76,7 @@ npm run dev
 
 - [Vue.js](https://vuejs.org/)
 - [Vite](https://vitejs.dev/)
-- [Streaming Markdown](https://github.com/lepture/streaming-markdown) for incremental rendering.
+- [Streaming Markdown](https://github.com/thetarnav/streaming-markdown) for incremental rendering.
 - [Shiki](https://shiki.style/) for code highlighting.
 
 ## License
