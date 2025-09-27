@@ -114,11 +114,6 @@ defineExpose({ scrollToFocusedRound, scrollToBottom })
   margin-top: -1px;
 }
 
-.round.focused .ask,
-.round.focused .response {
-  border-color: #4a9eff;
-}
-
 @media (prefers-color-scheme: dark) {
   .content {
     color: #ddd;
